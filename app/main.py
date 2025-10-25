@@ -1,15 +1,21 @@
 import sys
+from command import Command
+import argparse
 
 def main():
-    sys.stdout.write("$ ")
-    parse_input()
-    main()
 
-def parse_input():
-    # Captures the user's command in the "command" variable
-    command = input()
-    print(f"{command}: command not found")
+    while True:
+        sys.stdout.write("$ ")
+        sys.stdout.flush()
 
+        try:
+            user_input = input().strip()
+        except EOFError:
+            break
+
+        if user_input:
+            command = Command(user_input)
+            command.cmd_parser()
 
 if __name__ == "__main__":
     main()
