@@ -1,5 +1,5 @@
 import sys
-from command import Command
+from .command import Command
 import argparse
 
 def main():
