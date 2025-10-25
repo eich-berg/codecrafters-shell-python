@@ -10,5 +10,5 @@ class Command:
         if self.args[0] == "exit":
             sys.exit(0)
         if self.args[0] == "echo":
-            print(self.args[1:])
+            print("".join(arg for arg in self.args[1:]))
         print(f"{self.command}: command not found")
