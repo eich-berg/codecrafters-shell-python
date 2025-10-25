@@ -2,7 +2,6 @@ import sys
 import shutil
 import subprocess
 import os
-from .cmd_map import cmd_map
 
 class Handler:
     def __init__(self, args):
@@ -15,6 +14,7 @@ class Handler:
         print(" ".join(arg for arg in self.args[1:]))
     
     def handle_type(self):
+        from .cmd_map import cmd_map
         if self.args[1] in cmd_map.keys():
             print(f"{self.args[1]} is a shell builtin")
         elif full_path := shutil.which(self.args[1]):
