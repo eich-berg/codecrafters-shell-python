@@ -1,6 +1,8 @@
 import sys
 import shutil
 import subprocess
+from .cmd_map import cmd_map
+from .handler import Handler
 
 class Command:
     
@@ -9,24 +11,17 @@ class Command:
         self.args = args.split()
     
     def cmd_parser(self):
-        if self.args[0] == "exit":
-            sys.exit(0)
-        if self.args[0] == "echo":
-            print(" ".join(arg for arg in self.args[1:]))
+
+        handler = Handler(self.args)  # Pass args to handler
+
+        if self.args[0] in cmd_map:
+            cmd_map[self.args[0]](handler) # for ex. cmd_map["echo"](handler) -> calls Handler.handle_echo(handler)
             return
-        if self.args[0] == "type":
-            if self.args[1] in ["exit", "echo", "type"]:
-                print(f"{self.args[1]} is a shell builtin")
-            elif full_path := shutil.which(self.args[1]):
-                print(f"{self.args[1]} is {full_path}")
-            else:
-                print(f"{self.args[1]}: not found")
-            return
-        # Handle external commands - only if not a builtin
+            
+        # Handle external commands if not a builtin
         custom_exe = shutil.which(self.args[0]) # Find custom_exe in PATH
         if custom_exe:
-            # Execute it with arguments: custom_exe, arg1, arg2, argx, etc.
-            subprocess.run([self.args[0]] + self.args[1:])
+            handler.handle_custom_exe()
             return
-        else:
-            print(f"{self.command}: command not found")    
+            
+        print(f"{self.command}: command not found")
