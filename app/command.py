@@ -26,7 +26,7 @@ class Command:
         custom_exe = shutil.which(self.args[0]) # Find custom_exe in PATH
         if custom_exe:
             # Execute it with arguments: custom_exe, arg1, arg2, argx, etc.
-            subprocess.run([custom_exe] + self.args[1:])
+            subprocess.run([self.args[0]] + self.args[1:])
             return
         else:
-            print(f"{self.command}: command not found")
+            print(f"{self.command}: command not found")    
