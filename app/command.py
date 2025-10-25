@@ -1,4 +1,5 @@
 import sys
+import shutil
 
 class Command:
     
@@ -15,6 +16,8 @@ class Command:
         if self.args[0] == "type":
             if self.args[1] in ["exit", "echo", "type"]:
                 print(f"{self.args[1]} is a shell builtin")
+            elif full_path := shutil.which(self.args[1]):
+                 print(f"{self.args[1]} is {full_path}")
             else:
                 print(f"{self.args[1]}: not found")
             return
