@@ -34,7 +34,10 @@ class Handler:
     def handle_custom_exe(self):
         if self.redirect_type:
             with open(self.filename, 'w') as f:
-                subprocess.run([self.args[0]] + self.args[1:], stdout=f)
+                if self.redirect_type == "2>":
+                    subprocess.run([self.args[0]] + self.args[1:], stderr=f)
+                else:  # ">" or "1>"
+                    subprocess.run([self.args[0]] + self.args[1:], stdout=f)
         else:
             subprocess.run([self.args[0]] + self.args[1:])
 
