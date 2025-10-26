@@ -16,7 +16,7 @@ class Command:
         command_args = self.args
 
         # Check for redirect types
-        for op in [">", "1>", "2>", ">>", "1>>"]:
+        for op in [">", "1>", "2>", ">>", "1>>", "2>>"]:
             if op in self.args:
                 # Find the operator and filename
                 op_index = self.args.index(op)

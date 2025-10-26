@@ -26,7 +26,9 @@ class Handler:
         elif self.redirect_type == "2>":
             open(self.filename, 'w').close()  # Create empty file for stderr redirect
             print(output) # Print output to terminal
-        
+        elif self.redirect_type == "2>>":
+            open(self.filename, 'a').close()
+            print(output)
         else:
             print(output)
     
@@ -48,6 +50,9 @@ class Handler:
                 subprocess.run([self.args[0]] + self.args[1:], stdout=f)
         elif self.redirect_type == "2>":
             with open(self.filename, 'w') as f:
+                subprocess.run([self.args[0]] + self.args[1:], stderr=f)
+        elif self.redirect_type == "2>>":
+            with open(self.filename, 'a') as f:
                 subprocess.run([self.args[0]] + self.args[1:], stderr=f)
         else:
             subprocess.run([self.args[0]] + self.args[1:])
