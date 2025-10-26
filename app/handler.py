@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import os
 
+# TDOO -> change some print statements to  sys.stderr.write
+
 class Handler:
     def __init__(self, args):
         self.args = args
@@ -27,3 +29,10 @@ class Handler:
 
     def handle_pwd(self):
         print(os.getcwd())
+    
+    def handle_cd(self):
+        path = self.args[1]
+        if os.path.exists(path):
+            os.chdir(path)
+        else:
+            sys.stderr.write(f"cd: {path}: No such file or directory\n")

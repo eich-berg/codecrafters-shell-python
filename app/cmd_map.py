@@ -5,4 +5,5 @@ cmd_map = {
     "echo": Handler.handle_echo, 
     "type": Handler.handle_type,
     "pwd": Handler.handle_pwd,
+    "cd": Handler.handle_cd,
 }

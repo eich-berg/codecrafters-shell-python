@@ -1,6 +1,4 @@
-import sys
 import shutil
-import subprocess
 from .cmd_map import cmd_map
 from .handler import Handler
 
@@ -15,7 +13,7 @@ class Command:
         handler = Handler(self.args)  # Pass args to handler
 
         if self.args[0] in cmd_map:
-            cmd_map[self.args[0]](handler) # for ex. cmd_map["echo"](handler) -> calls Handler.handle_echo(handler)
+            cmd_map[self.args[0]](handler) # ex. cmd_map["echo"](handler) calls Handler.handle_echo(handler)
             return
             
         # Handle external commands if not a builtin
