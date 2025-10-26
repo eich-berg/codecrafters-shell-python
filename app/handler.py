@@ -34,7 +34,7 @@ class Handler:
         path = self.args[1]
         if path == "~":
             os.chdir(os.getenv("HOME"))
-        if os.path.exists(path):
+        elif os.path.exists(path):
             os.chdir(path)
         else:
             sys.stderr.write(f"cd: {path}: No such file or directory\n")
