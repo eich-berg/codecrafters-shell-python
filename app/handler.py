@@ -3,7 +3,8 @@ import shutil
 import subprocess
 import os
 
-# TDOO -> change some print statements to  sys.stderr.write
+# TODO -> change some print statements to  sys.stderr.write
+# TODO -> modularise redirection logic instead of repeating in each func
 
 class Handler:
     def __init__(self, args, redirect_type=None, filename=None):
@@ -16,12 +17,16 @@ class Handler:
     
     def handle_echo(self):
         output = " ".join(arg for arg in self.args[1:])
-        if self.redirect_type == "2>":
-            open(self.filename, 'w').close()  # Create empty file for stderr redirect
-            print(output) # Print output to terminal
+        if self.redirect_type in [">>", "1>>"]:
+            with open(self.filename, 'a') as f:  # 'a' for append
+                f.write(output + "\n")
         elif self.redirect_type in [">", "1>"]:  # Only redirect stdout
             with open(self.filename, 'w') as f:
                 f.write(output + "\n")
+        elif self.redirect_type == "2>":
+            open(self.filename, 'w').close()  # Create empty file for stderr redirect
+            print(output) # Print output to terminal
+        
         else:
             print(output)
     
@@ -35,12 +40,15 @@ class Handler:
             print(f"{self.args[1]}: not found")
         
     def handle_custom_exe(self):
-        if self.redirect_type:
+        if self.redirect_type in [">>", "1>>"]:
+            with open(self.filename, 'a') as f:
+                subprocess.run([self.args[0]] + self.args[1:], stdout=f)
+        elif self.redirect_type in [">", "1>"]:
             with open(self.filename, 'w') as f:
-                if self.redirect_type == "2>":
-                    subprocess.run([self.args[0]] + self.args[1:], stderr=f)
-                else:  # ">" or "1>"
-                    subprocess.run([self.args[0]] + self.args[1:], stdout=f)
+                subprocess.run([self.args[0]] + self.args[1:], stdout=f)
+        elif self.redirect_type == "2>":
+            with open(self.filename, 'w') as f:
+                subprocess.run([self.args[0]] + self.args[1:], stderr=f)n([self.args[0]] + self.args[1:], stdout=f)
         else:
             subprocess.run([self.args[0]] + self.args[1:])
 
