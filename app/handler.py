@@ -32,6 +32,8 @@ class Handler:
     
     def handle_cd(self):
         path = self.args[1]
+        if path == "~":
+            os.chdir(os.getenv("HOME"))
         if os.path.exists(path):
             os.chdir(path)
         else:
