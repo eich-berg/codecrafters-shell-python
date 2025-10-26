@@ -1,4 +1,5 @@
 import shutil
+import shlex
 from .cmd_map import cmd_map
 from .handler import Handler
 
@@ -6,7 +7,7 @@ class Command:
     
     def __init__(self, args):
         self.command = args
-        self.args = args.split()
+        self.args = shlex.split(args)  # This handles single quotes automatically
     
     def cmd_parser(self):
 
