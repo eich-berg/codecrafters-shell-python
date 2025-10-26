@@ -48,7 +48,7 @@ class Handler:
                 subprocess.run([self.args[0]] + self.args[1:], stdout=f)
         elif self.redirect_type == "2>":
             with open(self.filename, 'w') as f:
-                subprocess.run([self.args[0]] + self.args[1:], stderr=f)n([self.args[0]] + self.args[1:], stdout=f)
+                subprocess.run([self.args[0]] + self.args[1:], stderr=f)
         else:
             subprocess.run([self.args[0]] + self.args[1:])
 
