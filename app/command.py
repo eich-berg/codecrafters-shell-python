@@ -6,13 +6,14 @@ from .handler import Handler
 class Command:
     
     def __init__(self, args):
-        redirect = False
-        filename = None
-        command_args = self.args
         self.command = args
         self.args = shlex.split(args)  # This handles single quotes automatically
     
     def cmd_parser(self):
+
+        redirect = False
+        filename = None
+        command_args = self.args
 
         # Check for > or 1> in args
         if ">" in self.args or "1>" in self.args:
