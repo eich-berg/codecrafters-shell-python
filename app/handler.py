@@ -16,11 +16,14 @@ class Handler:
     
     def handle_echo(self):
         output = " ".join(arg for arg in self.args[1:])
-        if self.redirect_type in [">", "1>"]:  # Only redirect stdout
+        if self.redirect_type == "2>":
+            open(self.filename, 'w').close()  # Create empty file for stderr redirect
+            print(output) # Print output to terminal
+        elif self.redirect_type in [">", "1>"]:  # Only redirect stdout
             with open(self.filename, 'w') as f:
                 f.write(output + "\n")
         else:
-            print(output) # Print to terminal for 2> or no redirect
+            print(output)
     
     def handle_type(self):
         from .cmd_map import cmd_map
