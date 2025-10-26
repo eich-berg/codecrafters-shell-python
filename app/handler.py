@@ -6,18 +6,17 @@ import os
 # TDOO -> change some print statements to  sys.stderr.write
 
 class Handler:
-    def __init__(self, args, redirect=False, filename=None):
+    def __init__(self, args, redirect_type=None, filename=None):
         self.args = args
-        self.redirect = redirect
+        self.redirect_type = redirect_type
         self.filename = filename
-    
+        
     def handle_exit(self):
         sys.exit(0)
     
     def handle_echo(self):
         output = " ".join(arg for arg in self.args[1:])
-        
-        if self.redirect:
+        if self.redirect_type:
             with open(self.filename, 'w') as f:
                 f.write(output + "\n")
         else:
@@ -33,7 +32,7 @@ class Handler:
             print(f"{self.args[1]}: not found")
         
     def handle_custom_exe(self):
-        if self.redirect:
+        if self.redirect_type:
             with open(self.filename, 'w') as f:
                 subprocess.run([self.args[0]] + self.args[1:], stdout=f)
         else:

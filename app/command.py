@@ -11,19 +11,21 @@ class Command:
     
     def cmd_parser(self):
 
-        redirect = False
+        redirect_type = None
         filename = None
         command_args = self.args
 
-        # Check for > or 1> in args
-        if ">" in self.args or "1>" in self.args:
-            # Find the operator and filename
-            op_index = self.args.index(">") if ">" in self.args else self.args.index("1>")
-            filename = self.args[op_index + 1]
-            command_args = self.args[:op_index] # Remove redirect parts
-            redirect = True
+        # Check for redirect types
+        for op in [">", "1>", "2>"]:
+            if op in self.args:
+                # Find the operator and filename
+                op_index = self.args.index(op)
+                filename = self.args[op_index + 1]
+                command_args = self.args[:op_index] # Remove redirect parts
+                redirect_type = op
+                break
 
-        handler = Handler(command_args, redirect, filename)
+        handler = Handler(command_args, redirect_type, filename)
         
         if command_args[0] in cmd_map:
             cmd_map[command_args[0]](handler) # ex. cmd_map["echo"](handler) calls Handler.handle_echo(handler)
