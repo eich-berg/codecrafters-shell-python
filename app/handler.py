@@ -6,14 +6,22 @@ import os
 # TDOO -> change some print statements to  sys.stderr.write
 
 class Handler:
-    def __init__(self, args):
+    def __init__(self, args, redirect=False, filename=None):
         self.args = args
+        self.redirect = redirect
+        self.filename = filename
     
     def handle_exit(self):
         sys.exit(0)
     
     def handle_echo(self):
-        print(" ".join(arg for arg in self.args[1:]))
+        output = " ".join(arg for arg in self.args[1:])
+        
+        if self.redirect:
+            with open(self.filename, 'w') as f:
+                f.write(output + "\n")
+        else:
+            print(output)
     
     def handle_type(self):
         from .cmd_map import cmd_map
@@ -23,9 +31,13 @@ class Handler:
             print(f"{self.args[1]} is {full_path}")
         else:
             print(f"{self.args[1]}: not found")
-    
+        
     def handle_custom_exe(self):
-        subprocess.run([self.args[0]] + self.args[1:])
+        if self.redirect:
+            with open(self.filename, 'w') as f:
+                subprocess.run([self.args[0]] + self.args[1:], stdout=f)
+        else:
+            subprocess.run([self.args[0]] + self.args[1:])
 
     def handle_pwd(self):
         print(os.getcwd())
