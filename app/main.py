@@ -38,14 +38,12 @@ def tab_completer(text, state):
             last_completion_text = text
             last_completion_matches = all_options
             return None
+        # Second press with same prefix: show completions
         else:
-            # Second press with same prefix: show completions
             sys.stdout.write('\n')  # New line
             sys.stdout.write("  ".join(all_options) + '\n')  # Two spaces between items + newline
             # Explicitly reprint the prompt and input
-            # sys.stdout.write(f"$ {text}")
-            # # Re-display the prompt with current input
-            readline.redisplay()
+            sys.stdout.write(f"$ {text}")
             sys.stdout.flush()  # Force output to appear
             return None  # Don't complete, just show list
     
