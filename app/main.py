@@ -1,17 +1,22 @@
 import sys
 import readline
 import os
+
 from .command import Command
 from .cmd_map import cmd_map
 
+last_completion_text = None
+last_completion_matches = None
+
 def tab_completer(text, state):
     """Tab completion function for builtin commands/external executables"""
+    global last_completion_text, last_completion_matches
+
     # Get builtin commands that match
     builtin_options = [cmd for cmd in cmd_map.keys() if cmd.startswith(text)]
     # Get external executables that match
     exe_options = []
     path_dirs = os.getenv("PATH", "").split(os.pathsep)
-  
     for path_dir in path_dirs:
         if os.path.isdir(path_dir):
             try:
@@ -22,18 +27,19 @@ def tab_completer(text, state):
                 continue
     
     # Remove duplicates and combine
-    all_options = builtin_options + list(set(exe_options) - set(builtin_options))
-    all_options.sort()
+    all_options = sorted(set(builtin_options + exe_options))
     
     # Handle multiple matches
     if len(all_options) > 1:
-        if state == 0:
-            # First TAB press with multiple matches - ring bell
-            sys.stdout.write('\a')  # Bell character
+        # First press: ring bell only
+        if text != last_completion_text:
+            sys.stdout.write('\a')
             sys.stdout.flush()
-            return None  # Don't complete anything
-        elif state == 1:
-            # Second TAB press - show all options
+            last_completion_text = text
+            last_completion_matches = all_options
+            return None
+        else:
+            # Second press with same prefix: show completions
             sys.stdout.write('\n')  # New line
             sys.stdout.write("  ".join(all_options) + '\n')  # Two spaces between items + newline
             sys.stdout.flush()  # Force output to appear
@@ -41,10 +47,13 @@ def tab_completer(text, state):
             readline.redisplay()
             return None  # Don't complete, just show list
     
-    # Normal single-match completion
+    # Single match
+    last_completion_text = None
+    last_completion_matches = None
     if state < len(all_options):
         return all_options[state] + " "
     return None
+
 
 def main():
     # Set up tab completion
