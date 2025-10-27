@@ -1,7 +1,6 @@
 import sys
 import readline
 import os
-import shutil
 from .command import Command
 from .cmd_map import cmd_map
 
@@ -26,8 +25,22 @@ def tab_completer(text, state):
     all_options = builtin_options + list(set(exe_options) - set(builtin_options))
     all_options.sort()
     
+    # Handle multiple matches
+    if len(all_options) > 1:
+        if state == 0:
+            # First TAB press with multiple matches - ring bell
+            sys.stdout.write('\a')  # Bell character
+            sys.stdout.flush()
+            return None  # Don't complete anything
+        elif state == 1:
+            # Second TAB press - show all options
+            print()  # New line
+            print("  ".join(all_options))  # Two spaces between items
+            return None  # Don't complete, just show list
+    
+    # Normal single-match completion
     if state < len(all_options):
-        return all_options[state] + " "  # Space at the end as required
+        return all_options[state] + " "
     return None
 
 def main():
