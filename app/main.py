@@ -1,14 +1,33 @@
 import sys
 import readline
+import os
+import shutil
 from .command import Command
 from .cmd_map import cmd_map
-import argparse
 
 def tab_completer(text, state):
-    """Tab completion function for builtin commands"""
-    options = [cmd for cmd in cmd_map.keys() if cmd.startswith(text)]
-    if state < len(options):
-        return options[state] + " "  # Note the space at the end
+    """Tab completion function for builtin commands/external executables"""
+    # Get builtin commands that match
+    builtin_options = [cmd for cmd in cmd_map.keys() if cmd.startswith(text)]
+    # Get external executables that match
+    exe_options = []
+    path_dirs = os.getenv("PATH", "").split(os.pathsep)
+  
+    for path_dir in path_dirs:
+        if os.path.isdir(path_dir):
+            try:
+                for item in os.listdir(path_dir):
+                    if item.startswith(text) and os.access(os.path.join(path_dir, item), os.X_OK):
+                        exe_options.append(item)
+            except OSError:
+                continue
+    
+    # Remove duplicates and combine
+    all_options = builtin_options + list(set(exe_options) - set(builtin_options))
+    all_options.sort()
+    
+    if state < len(all_options):
+        return all_options[state] + " "  # Space at the end as required
     return None
 
 def main():
