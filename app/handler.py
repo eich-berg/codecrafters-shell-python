@@ -1,64 +1,38 @@
 import sys
 import shutil
-import subprocess
 import os
-
-# TODO -> change some print statements to  sys.stderr.write
-# TODO -> modularise redirection logic instead of repeating in each func
+from .output import Output
 
 class Handler:
     def __init__(self, args, redirect_type=None, filename=None):
         self.args = args
-        self.redirect_type = redirect_type
-        self.filename = filename
+        self.output_handler = Output(redirect_type, filename)
         
     def handle_exit(self):
         sys.exit(0)
     
     def handle_echo(self):
         output = " ".join(arg for arg in self.args[1:])
-        if self.redirect_type in [">>", "1>>"]:
-            with open(self.filename, 'a') as f:  # 'a' for append
-                f.write(output + "\n")
-        elif self.redirect_type in [">", "1>"]:  # Only redirect stdout
-            with open(self.filename, 'w') as f:
-                f.write(output + "\n")
-        elif self.redirect_type == "2>":
-            open(self.filename, 'w').close()  # Create empty file for stderr redirect
-            print(output) # Print output to terminal
-        elif self.redirect_type == "2>>":
-            open(self.filename, 'a').close()
-            print(output)
-        else:
-            print(output)
+        self.output_handler.execute_builtin_with_redirect(output, is_error=False)
     
     def handle_type(self):
         from .cmd_map import cmd_map
         if self.args[1] in cmd_map.keys():
-            print(f"{self.args[1]} is a shell builtin")
+            output = f"{self.args[1]} is a shell builtin"
+            self.output_handler.execute_builtin_with_redirect(output, is_error=False)
         elif full_path := shutil.which(self.args[1]):
-            print(f"{self.args[1]} is {full_path}")
+            output = f"{self.args[1]} is {full_path}"
+            self.output_handler.execute_builtin_with_redirect(output, is_error=False)
         else:
-            print(f"{self.args[1]}: not found")
-        
+            output = f"{self.args[1]}: not found"
+            self.output_handler.execute_builtin_with_redirect(output, is_error=True)
+    
     def handle_custom_exe(self):
-        if self.redirect_type in [">>", "1>>"]:
-            with open(self.filename, 'a') as f:
-                subprocess.run([self.args[0]] + self.args[1:], stdout=f)
-        elif self.redirect_type in [">", "1>"]:
-            with open(self.filename, 'w') as f:
-                subprocess.run([self.args[0]] + self.args[1:], stdout=f)
-        elif self.redirect_type == "2>":
-            with open(self.filename, 'w') as f:
-                subprocess.run([self.args[0]] + self.args[1:], stderr=f)
-        elif self.redirect_type == "2>>":
-            with open(self.filename, 'a') as f:
-                subprocess.run([self.args[0]] + self.args[1:], stderr=f)
-        else:
-            subprocess.run([self.args[0]] + self.args[1:])
+        self.output_handler.execute_external_with_redirect([self.args[0]] + self.args[1:])
 
     def handle_pwd(self):
-        print(os.getcwd())
+        output = os.getcwd()
+        self.output_handler.execute_builtin_with_redirect(output, is_error=False)
     
     def handle_cd(self):
         path = self.args[1]
@@ -67,4 +41,5 @@ class Handler:
         elif os.path.exists(path):
             os.chdir(path)
         else:
-            sys.stderr.write(f"cd: {path}: No such file or directory\n")
+            error_msg = f"cd: {path}: No such file or directory"
+            self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
