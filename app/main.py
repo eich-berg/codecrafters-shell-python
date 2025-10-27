@@ -34,8 +34,11 @@ def tab_completer(text, state):
             return None  # Don't complete anything
         elif state == 1:
             # Second TAB press - show all options
-            print()  # New line
-            print("  ".join(all_options))  # Two spaces between items
+            sys.stdout.write('\n')  # New line
+            sys.stdout.write("  ".join(all_options) + '\n')  # Two spaces between items + newline
+            sys.stdout.flush()  # Force output to appear
+            # Re-display the prompt with current input
+            readline.redisplay()
             return None  # Don't complete, just show list
     
     # Normal single-match completion
