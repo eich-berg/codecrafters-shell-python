@@ -4,7 +4,6 @@ import os
 import subprocess
 import io
 from .output import Output
-from .cmd_map import cmd_map
 from contextlib import redirect_stdout, redirect_stderr, redirect_stdin
 
 class Handler:
@@ -50,6 +49,7 @@ class Handler:
 
 
     def handle_pipeline(self, left_cmd, right_cmd):
+        from .cmd_map import cmd_map
         try:
             # --- Run left side (produce output) ---
             if left_cmd[0] in cmd_map:
