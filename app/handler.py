@@ -3,9 +3,9 @@ import shutil
 import os
 import subprocess
 import io
-from contextlib import redirect_stdout, redirect_stdin
 from .output import Output
 from .cmd_map import cmd_map
+from contextlib import redirect_stdout, redirect_stderr, redirect_stdin
 
 class Handler:
     def __init__(self, args, redirect_type=None, filename=None):
@@ -48,51 +48,39 @@ class Handler:
             error_msg = f"cd: {path}: No such file or directory"
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
+
     def handle_pipeline(self, left_cmd, right_cmd):
         try:
-        #     p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-        #     p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
-            
-        #     p1.stdout.close()
-        #     p2.wait()  # Wait for second command to finish
-        #     p1.terminate()  # Stop the first command when second finishes
-            
-        # except Exception as e:
-        #     print(f"Error executing pipeline: {e}", file=sys.stderr)
-
-            # Check if left command is a builtin
+            # --- Run left side (produce output) ---
             if left_cmd[0] in cmd_map:
-                # For builtin commands, we need to capture their output manually
-                output_buffer = io.StringIO()
+                # Builtin: capture its stdout into memory
+                buf = io.StringIO()
                 left_handler = Handler(left_cmd)
-                
-                with redirect_stdout(output_buffer):
+                with redirect_stdout(buf):
                     cmd_map[left_cmd[0]](left_handler)
-                
-                left_output = output_buffer.getvalue().encode()
+                left_output = buf.getvalue().encode()
             else:
-                # External command - use subprocess
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                left_output = p1.communicate()[0]
-                if p1.returncode != 0:
-                    # Handle command failure if needed
-                    pass
-            
-            # Check if right command is a builtin  
+                # External command
+                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                left_output, _ = p1.communicate()
+
+            # --- Run right side (consume input) ---
             if right_cmd[0] in cmd_map:
-                # For builtin commands that read from stdin in pipeline
-                # Create a temporary file-like object with the left command's output
-                input_buffer = io.BytesIO(left_output)
                 right_handler = Handler(right_cmd)
-                # For builtins that might read from stdin 
-                # For now, just execute normally since type/echo don't read stdin
-                with redirect_stdin(io.TextIOWrapper(input_buffer)):
+
+                # Case: builtin that *reads* stdin (not true for 'type', but future-proof)
+                if getattr(cmd_map[right_cmd[0]], "reads_stdin", False):
+                    with redirect_stdin(io.TextIOWrapper(io.BytesIO(left_output))):
+                        cmd_map[right_cmd[0]](right_handler)
+                else:
+                    # Builtin ignores stdin (like 'type')
                     cmd_map[right_cmd[0]](right_handler)
+
             else:
-                # External command - pipe the output
+                # External command: feed left_output into stdin
                 p2 = subprocess.Popen(right_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-                output = p2.communicate(input=left_output)[0]
-                print(output.decode(), end='')
-                
+                output, _ = p2.communicate(input=left_output)
+                sys.stdout.write(output.decode())
+
         except Exception as e:
-            print(f"Error executing pipeline: {e}")
+            print(f"Error executing pipeline: {e}", file=sys.stderr)
