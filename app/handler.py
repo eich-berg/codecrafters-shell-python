@@ -1,6 +1,7 @@
 import sys
 import shutil
 import os
+import subprocess
 from .output import Output
 
 class Handler:
@@ -43,3 +44,15 @@ class Handler:
         else:
             error_msg = f"cd: {path}: No such file or directory"
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
+
+    def handle_pipeline(self, left_cmd, right_cmd):
+        try:
+            p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
+            
+            p1.stdout.close()
+            p2.wait()  # Wait for second command to finish
+            p1.terminate()  # Stop the first command when second finishes
+            
+        except Exception as e:
+            print(f"Error executing pipeline: {e}", file=sys.stderr)

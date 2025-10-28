@@ -51,16 +51,3 @@ class Command:
             return
             
         print(f"{self.command}: command not found")
-
-
-    def handle_pipeline(self, left_cmd, right_cmd):
-        try:
-            p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
-            
-            p1.stdout.close()
-            p2.wait()  # Wait for second command to finish
-            p1.terminate()  # Stop the first command when second finishes
-            
-        except Exception as e:
-            print(f"Error executing pipeline: {e}", file=sys.stderr)
