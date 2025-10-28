@@ -59,36 +59,46 @@ class Handler:
     def handle_pipeline(self, left_cmd, right_cmd):
         from .cmd_map import cmd_map
         try:
-            # --- Run left side (produce output) ---
-            if left_cmd[0] in cmd_map:
-                # Builtin: capture its stdout into memory
+            # --- Case 1: both are external (streaming) ---
+            if left_cmd[0] not in cmd_map and right_cmd[0] not in cmd_map:
+                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+                p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
+                p1.stdout.close()  # Allow p1 to receive SIGPIPE if p2 exits early
+                p2.wait()          # Wait for second command (e.g., `head`) to finish
+                p1.terminate()     # Stop `tail -f` or other continuous producer
+                return
+
+            # --- Case 2: left is builtin, right is external ---
+            if left_cmd[0] in cmd_map and right_cmd[0] not in cmd_map:
                 buf = io.StringIO()
                 left_handler = Handler(left_cmd)
                 with redirect_stdout(buf):
                     cmd_map[left_cmd[0]](left_handler)
                 left_output = buf.getvalue().encode()
-            else:
-                # External command
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                left_output, _ = p1.communicate()
 
-            # --- Run right side (consume input) ---
-            if right_cmd[0] in cmd_map:
-                right_handler = Handler(right_cmd)
-
-                # Case: builtin that *reads* stdin (not true for 'type', but future-proof)
-                if getattr(cmd_map[right_cmd[0]], "reads_stdin", False):
-                    with redirect_stdin(io.TextIOWrapper(io.BytesIO(left_output))):
-                        cmd_map[right_cmd[0]](right_handler)
-                else:
-                    # Builtin ignores stdin (like 'type')
-                    cmd_map[right_cmd[0]](right_handler)
-
-            else:
-                # External command: feed left_output into stdin
                 p2 = subprocess.Popen(right_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
                 output, _ = p2.communicate(input=left_output)
                 sys.stdout.write(output.decode())
+                return
+
+            # --- Case 3: left is external, right is builtin ---
+            if left_cmd[0] not in cmd_map and right_cmd[0] in cmd_map:
+                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+                left_output, _ = p1.communicate()
+                right_handler = Handler(right_cmd)
+                cmd_map[right_cmd[0]](right_handler)
+                return
+
+            # --- Case 4: both are builtins ---
+            if left_cmd[0] in cmd_map and right_cmd[0] in cmd_map:
+                buf = io.StringIO()
+                left_handler = Handler(left_cmd)
+                with redirect_stdout(buf):
+                    cmd_map[left_cmd[0]](left_handler)
+                left_output = buf.getvalue().encode()
+                right_handler = Handler(right_cmd)
+                cmd_map[right_cmd[0]](right_handler)
+                return
 
         except Exception as e:
             print(f"Error executing pipeline: {e}", file=sys.stderr)
