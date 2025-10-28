@@ -4,7 +4,15 @@ import os
 import subprocess
 import io
 from .output import Output
-from contextlib import redirect_stdout, redirect_stderr, redirect_stdin
+from contextlib import redirect_stdout, redirect_stderr
+
+def redirect_stdin(target):
+    old_stdin = sys.stdin
+    try:
+        sys.stdin = target
+        yield
+    finally:
+        sys.stdin = old_stdin
 
 class Handler:
     def __init__(self, args, redirect_type=None, filename=None):
