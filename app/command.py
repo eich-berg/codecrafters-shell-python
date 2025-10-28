@@ -1,7 +1,5 @@
 import shutil
-import sys
 import shlex
-import subprocess
 from .cmd_map import cmd_map
 from .handler import Handler
 
@@ -12,7 +10,6 @@ class Command:
         self.args = shlex.split(args)  # This handles single quotes automatically
     
     def cmd_parser(self):
-
         # Check for pipe operator
         if "|" in self.args:
             pipe_index = self.args.index("|")
