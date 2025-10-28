@@ -1,5 +1,7 @@
 import shutil
+import sys
 import shlex
+import subprocess
 from .cmd_map import cmd_map
 from .handler import Handler
 
@@ -11,6 +13,17 @@ class Command:
     
     def cmd_parser(self):
 
+        # Check for pipe operator
+        if "|" in self.args:
+            pipe_index = self.args.index("|")
+            left_command = self.args[:pipe_index]
+            right_command = self.args[pipe_index + 1:]
+            
+            # Handle pipeline
+            handler = Handler(self.args)
+            handler.handle_pipeline(left_command, right_command)
+            return
+        
         redirect_type = None
         filename = None
         command_args = self.args
@@ -38,3 +51,16 @@ class Command:
             return
             
         print(f"{self.command}: command not found")
+
+
+    def handle_pipeline(self, left_cmd, right_cmd):
+        try:
+            p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
+            
+            p1.stdout.close()
+            p2.wait()  # Wait for second command to finish
+            p1.terminate()  # Stop the first command when second finishes
+            
+        except Exception as e:
+            print(f"Error executing pipeline: {e}", file=sys.stderr)
