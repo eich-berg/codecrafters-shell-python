@@ -56,49 +56,117 @@ class Handler:
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
 
-    def handle_pipeline(self, left_cmd, right_cmd):
+    # def handle_pipeline(self, left_cmd, right_cmd):
+    #     from .cmd_map import cmd_map
+    #     try:
+    #         # --- Case 1: both are external (streaming) ---
+    #         if left_cmd[0] not in cmd_map and right_cmd[0] not in cmd_map:
+    #             p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+    #             p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
+    #             p1.stdout.close()  # Allow p1 to receive SIGPIPE if p2 exits early
+    #             p2.wait()          # Wait for second command (e.g., `head`) to finish
+    #             p1.terminate()     # Stop `tail -f` or other continuous producer
+    #             return
+
+    #         # --- Case 2: left is builtin, right is external ---
+    #         if left_cmd[0] in cmd_map and right_cmd[0] not in cmd_map:
+    #             buf = io.StringIO()
+    #             left_handler = Handler(left_cmd)
+    #             with redirect_stdout(buf):
+    #                 cmd_map[left_cmd[0]](left_handler)
+    #             left_output = buf.getvalue().encode()
+
+    #             p2 = subprocess.Popen(right_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    #             output, _ = p2.communicate(input=left_output)
+    #             sys.stdout.write(output.decode())
+    #             return
+
+    #         # --- Case 3: left is external, right is builtin ---
+    #         if left_cmd[0] not in cmd_map and right_cmd[0] in cmd_map:
+    #             p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+    #             left_output, _ = p1.communicate()
+    #             right_handler = Handler(right_cmd)
+    #             cmd_map[right_cmd[0]](right_handler)
+    #             return
+
+    #         # --- Case 4: both are builtins ---
+    #         if left_cmd[0] in cmd_map and right_cmd[0] in cmd_map:
+    #             buf = io.StringIO()
+    #             left_handler = Handler(left_cmd)
+    #             with redirect_stdout(buf):
+    #                 cmd_map[left_cmd[0]](left_handler)
+    #             left_output = buf.getvalue().encode()
+    #             right_handler = Handler(right_cmd)
+    #             cmd_map[right_cmd[0]](right_handler)
+    #             return
+
+    #     except Exception as e:
+    #         print(f"Error executing pipeline: {e}", file=sys.stderr)
+
+    def handle_pipeline(self, commands):
         from .cmd_map import cmd_map
+
+        processes = []
+        prev_stdout = None  # For piping between processes
+        builtin_output = None  # For chaining builtin output
+
         try:
-            # --- Case 1: both are external (streaming) ---
-            if left_cmd[0] not in cmd_map and right_cmd[0] not in cmd_map:
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
-                p1.stdout.close()  # Allow p1 to receive SIGPIPE if p2 exits early
-                p2.wait()          # Wait for second command (e.g., `head`) to finish
-                p1.terminate()     # Stop `tail -f` or other continuous producer
-                return
+            for i, cmd in enumerate(commands):
+                is_builtin = cmd[0] in cmd_map
+                is_last = (i == len(commands) - 1)
 
-            # --- Case 2: left is builtin, right is external ---
-            if left_cmd[0] in cmd_map and right_cmd[0] not in cmd_map:
-                buf = io.StringIO()
-                left_handler = Handler(left_cmd)
-                with redirect_stdout(buf):
-                    cmd_map[left_cmd[0]](left_handler)
-                left_output = buf.getvalue().encode()
+                # --- Case 1: Builtin command ---
+                if is_builtin:
+                    buf = io.StringIO()
+                    h = Handler(cmd)
+                    with redirect_stdout(buf):
+                        cmd_map[cmd[0]](h)
+                    builtin_output = buf.getvalue().encode()
+                    prev_stdout = io.BytesIO(builtin_output)
+                    continue
 
-                p2 = subprocess.Popen(right_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-                output, _ = p2.communicate(input=left_output)
-                sys.stdout.write(output.decode())
-                return
+                # --- Case 2: External command ---
+                stdin = None
+                if builtin_output is not None:
+                    # Feed builtin output into stdin
+                    stdin = subprocess.PIPE
+                elif prev_stdout is not None:
+                    # Pipe from previous process
+                    stdin = prev_stdout
 
-            # --- Case 3: left is external, right is builtin ---
-            if left_cmd[0] not in cmd_map and right_cmd[0] in cmd_map:
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                left_output, _ = p1.communicate()
-                right_handler = Handler(right_cmd)
-                cmd_map[right_cmd[0]](right_handler)
-                return
+                stdout = subprocess.PIPE if not is_last else None
 
-            # --- Case 4: both are builtins ---
-            if left_cmd[0] in cmd_map and right_cmd[0] in cmd_map:
-                buf = io.StringIO()
-                left_handler = Handler(left_cmd)
-                with redirect_stdout(buf):
-                    cmd_map[left_cmd[0]](left_handler)
-                left_output = buf.getvalue().encode()
-                right_handler = Handler(right_cmd)
-                cmd_map[right_cmd[0]](right_handler)
-                return
+                p = subprocess.Popen(cmd, stdin=stdin, stdout=stdout)
+
+                # If feeding builtin output
+                if builtin_output is not None:
+                    p.communicate(input=builtin_output)
+                    builtin_output = None
+                    prev_stdout = p.stdout if not is_last else None
+                else:
+                    prev_stdout = p.stdout
+
+                processes.append(p)
+
+            # --- Wait for last process and print output ---
+            if processes:
+                last_proc = processes[-1]
+                output, _ = last_proc.communicate()
+                if output:
+                    sys.stdout.write(output.decode())
+                for p in processes[:-1]:
+                    p.wait()
+
+            # --- If last stage was a builtin ---
+            elif builtin_output is not None:
+                sys.stdout.write(builtin_output.decode())
 
         except Exception as e:
             print(f"Error executing pipeline: {e}", file=sys.stderr)
+        finally:
+            # Cleanup continuous producers (like tail -f)
+            for p in processes:
+                try:
+                    p.terminate()
+                except Exception:
+                    pass

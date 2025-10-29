@@ -12,13 +12,22 @@ class Command:
     def cmd_parser(self):
         # Check for pipe operator
         if "|" in self.args:
-            pipe_index = self.args.index("|")
-            left_command = self.args[:pipe_index]
-            right_command = self.args[pipe_index + 1:]
-            
-            # Handle pipeline
+            # Split into multiple commands by '|'
+            commands = []
+            current = []
+            for arg in self.args:
+                if arg == "|":
+                    if current:
+                        commands.append(current)
+                        current = []
+                else:
+                    current.append(arg)
+            if current:
+                commands.append(current)
+
+            # Pass the list of commands to handler
             handler = Handler(self.args)
-            handler.handle_pipeline(left_command, right_command)
+            handler.handle_pipeline(commands)
             return
         
         redirect_type = None
