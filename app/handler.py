@@ -58,10 +58,14 @@ class Handler:
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
     def handle_history(self):
+        
         n = int(self.args[1]) if len(self.args) > 1 and self.args[1].isdigit() else None
         entries = self.history[-n:] if n else self.history
-        output = "\n".join(f"    {i+1}  {cmd}" for i, cmd in enumerate(entries))
+        start = len(self.history) - len(entries) + 1
+        output = "\n".join(f"    {i}  {cmd}" for i, cmd in enumerate(entries, start))
         self.output_handler.execute_builtin_with_redirect(output, is_error=False)
+
+
 
     # def handle_pipeline(self, left_cmd, right_cmd):
     #     from .cmd_map import cmd_map
