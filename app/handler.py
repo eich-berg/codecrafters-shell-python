@@ -107,8 +107,8 @@ class Handler:
         from .cmd_map import cmd_map
 
         processes = []
-        prev_stdout = None  # For piping between processes
-        builtin_output = None  # For chaining builtin output
+        prev_stdout = None
+        builtin_output = None
 
         try:
             for i, cmd in enumerate(commands):
@@ -128,17 +128,14 @@ class Handler:
                 # --- Case 2: External command ---
                 stdin = None
                 if builtin_output is not None:
-                    # Feed builtin output into stdin
                     stdin = subprocess.PIPE
                 elif prev_stdout is not None:
-                    # Pipe from previous process
                     stdin = prev_stdout
 
                 stdout = subprocess.PIPE if not is_last else None
 
                 p = subprocess.Popen(cmd, stdin=stdin, stdout=stdout)
 
-                # If feeding builtin output
                 if builtin_output is not None:
                     p.communicate(input=builtin_output)
                     builtin_output = None
@@ -148,7 +145,28 @@ class Handler:
 
                 processes.append(p)
 
-            # --- Wait for last process and print output ---
+            # --- NEW: handle last command being a builtin ---
+            if commands and commands[-1][0] in cmd_map and len(commands) > 1:
+                last_cmd = commands[-1]
+                last_is_builtin = last_cmd[0] in cmd_map
+                if last_is_builtin:
+                    # Read the output of the previous (external) pipeline
+                    if prev_stdout:
+                        prev_output, _ = processes[-1].communicate()
+                        prev_stdout = None
+                    else:
+                        prev_output = b""
+
+                    buf_in = io.StringIO(prev_output.decode())
+                    sys.stdin = buf_in  # temporarily redirect stdin
+                    try:
+                        h = Handler(last_cmd)
+                        cmd_map[last_cmd[0]](h)
+                    finally:
+                        sys.stdin = sys.__stdin__
+                    return
+
+            # --- Regular final output case ---
             if processes:
                 last_proc = processes[-1]
                 output, _ = last_proc.communicate()
@@ -157,14 +175,12 @@ class Handler:
                 for p in processes[:-1]:
                     p.wait()
 
-            # --- If last stage was a builtin ---
             elif builtin_output is not None:
                 sys.stdout.write(builtin_output.decode())
 
         except Exception as e:
             print(f"Error executing pipeline: {e}", file=sys.stderr)
         finally:
-            # Cleanup continuous producers (like tail -f)
             for p in processes:
                 try:
                     p.terminate()
