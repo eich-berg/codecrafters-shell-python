@@ -7,6 +7,8 @@ def main():
     # Set up tab completion
     readline.set_completer(tab_completer)
     readline.parse_and_bind("tab: complete")
+
+    history = []
     
     while True:
         sys.stdout.write("$ ")
@@ -18,7 +20,8 @@ def main():
             break
 
         if user_input:
-            command = Command(user_input)
+            history.append(user_input)
+            command = Command(user_input, history)
             command.cmd_parser()
 
 if __name__ == "__main__":

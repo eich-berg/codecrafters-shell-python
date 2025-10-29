@@ -15,10 +15,12 @@ def redirect_stdin(target):
         sys.stdin = old_stdin
 
 class Handler:
-    def __init__(self, args, redirect_type=None, filename=None):
+
+    def __init__(self, args, redirect_type=None, filename=None, history=None):
         self.args = args
         self.output_handler = Output(redirect_type, filename)
-        
+        self.history = history or []
+
     def handle_exit(self):
         sys.exit(0)
     
@@ -55,6 +57,12 @@ class Handler:
             error_msg = f"cd: {path}: No such file or directory"
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
+    def handle_history(self):
+        lines = []
+        for i, cmd in enumerate(self.history, start=1):
+            lines.append(f"    {i}  {cmd}")
+        output = "\n".join(lines)
+        self.output_handler.execute_builtin_with_redirect(output, is_error=False)
 
     # def handle_pipeline(self, left_cmd, right_cmd):
     #     from .cmd_map import cmd_map

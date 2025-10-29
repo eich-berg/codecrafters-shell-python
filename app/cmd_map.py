@@ -6,4 +6,5 @@ cmd_map = {
     "type": Handler.handle_type,
     "pwd": Handler.handle_pwd,
     "cd": Handler.handle_cd,
-}
+    "history": Handler.handle_history, 
+    }
