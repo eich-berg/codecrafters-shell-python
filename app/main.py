@@ -41,11 +41,12 @@
 
 # if __name__ == "__main__":
 #     main()
+
 import sys
 import readline
 import os
-from .tab_completion import tab_completer
 from .command import Command
+from .tab_completion import tab_completer
 
 HISTORY_FILE = "/tmp/.shell_history"
 
@@ -57,10 +58,10 @@ import atexit
 atexit.register(readline.write_history_file, HISTORY_FILE)
 
 def main():
-    # Set up tab completion
+    # Tab completion + arrow keys
     readline.set_completer(tab_completer)
     readline.parse_and_bind("tab: complete")
-    readline.parse_and_bind("set enable-keypad on")  # Up/Down arrows
+    readline.parse_and_bind("set enable-keypad on")
 
     history = []
 
@@ -76,7 +77,7 @@ def main():
         if not user_input:
             continue
 
-        # Always add to history, even if command fails
+        # Add to history BEFORE executing
         history.append(user_input)
         readline.add_history(user_input)
         readline.write_history_file(HISTORY_FILE)
