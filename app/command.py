@@ -60,20 +60,19 @@
             
 #         print(f"{self.command}: command not found")
 
-
-import shutil
 import shlex
-from .cmd_map import cmd_map
+import shutil
 from .handler import Handler
-    
+from .cmd_map import cmd_map
+
 class Command:
     def __init__(self, args, history=None):
         self.command = args
         self.args = shlex.split(args)
         self.history = history or []
-    
+
     def cmd_parser(self):
-        # Check for pipe operator
+        # Handle pipelines
         if "|" in self.args:
             commands = []
             current = []
@@ -86,16 +85,14 @@ class Command:
                     current.append(arg)
             if current:
                 commands.append(current)
-
             handler = Handler(self.args, history=self.history)
             handler.handle_pipeline(commands)
             return
-        
+
+        # Handle redirections
         redirect_type = None
         filename = None
         command_args = self.args
-
-        # Check for redirect types
         for op in [">", "1>", "2>", ">>", "1>>", "2>>"]:
             if op in self.args:
                 op_index = self.args.index(op)
@@ -105,15 +102,15 @@ class Command:
                 break
 
         handler = Handler(command_args, redirect_type, filename, self.history)
-        
+
+        # Builtins
         if command_args[0] in cmd_map:
             cmd_map[command_args[0]](handler)
             return
-                
-        # Handle external commands if not a builtin
-        custom_exe = shutil.which(self.args[0])
-        if custom_exe:
+
+        # External commands
+        if shutil.which(command_args[0]):
             handler.handle_custom_exe()
             return
-            
+
         print(f"{self.command}: command not found")

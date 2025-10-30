@@ -197,102 +197,81 @@
     #                 p.terminate()
     #             except Exception:
     #                 pass
-
 import sys
-import shutil
 import os
+import shutil
 import subprocess
 import io
 from .output import Output
 from contextlib import redirect_stdout
 
+from .cmd_map import cmd_map
+
 class Handler:
     def __init__(self, args, redirect_type=None, filename=None, history=None):
         self.args = args
-        self.output_handler = Output(redirect_type, filename)
         self.history = history or []
+        self.output_handler = Output(redirect_type, filename)
 
     def handle_exit(self):
         sys.exit(0)
-    
+
     def handle_echo(self):
-        output = " ".join(arg for arg in self.args[1:])
-        self.output_handler.execute_builtin_with_redirect(output, is_error=False)
-    
+        output = " ".join(self.args[1:])
+        self.output_handler.execute_builtin_with_redirect(output)
+
     def handle_type(self):
-        from .cmd_map import cmd_map
-        if self.args[1] in cmd_map.keys():
-            output = f"{self.args[1]} is a shell builtin"
-            self.output_handler.execute_builtin_with_redirect(output, is_error=False)
-        elif full_path := shutil.which(self.args[1]):
-            output = f"{self.args[1]} is {full_path}"
-            self.output_handler.execute_builtin_with_redirect(output, is_error=False)
+        name = self.args[1]
+        if name in cmd_map:
+            output = f"{name} is a shell builtin"
+        elif full_path := shutil.which(name):
+            output = f"{name} is {full_path}"
         else:
-            output = f"{self.args[1]}: not found"
-            self.output_handler.execute_builtin_with_redirect(output, is_error=True)
-    
-    def handle_custom_exe(self):
-        self.output_handler.execute_external_with_redirect([self.args[0]] + self.args[1:])
+            output = f"{name}: not found"
+        self.output_handler.execute_builtin_with_redirect(output)
 
     def handle_pwd(self):
-        output = os.getcwd()
-        self.output_handler.execute_builtin_with_redirect(output, is_error=False)
-    
+        self.output_handler.execute_builtin_with_redirect(os.getcwd())
+
     def handle_cd(self):
-        path = self.args[1]
+        path = self.args[1] if len(self.args) > 1 else os.getenv("HOME")
         if path == "~":
-            os.chdir(os.getenv("HOME"))
-        elif os.path.exists(path):
+            path = os.getenv("HOME")
+        if os.path.isdir(path):
             os.chdir(path)
         else:
-            error_msg = f"cd: {path}: No such file or directory"
-            self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
+            self.output_handler.execute_builtin_with_redirect(f"cd: {path}: No such file or directory", is_error=True)
 
     def handle_history(self):
-        # Use the history passed from main (which comes from readline)
         n = int(self.args[1]) if len(self.args) > 1 and self.args[1].isdigit() else None
         entries = self.history[-n:] if n else self.history
-        start_index = len(self.history) - len(entries) + 1
-        
-        output_lines = []
-        for i, cmd in enumerate(entries, start_index):
-            output_lines.append(f"    {i}  {cmd}")
-        
-        output = "\n".join(output_lines)
-        self.output_handler.execute_builtin_with_redirect(output, is_error=False)
+        start = len(self.history) - len(entries) + 1
+        output = "\n".join(f"    {i}  {cmd}" for i, cmd in enumerate(entries, start))
+        self.output_handler.execute_builtin_with_redirect(output)
+
+    def handle_custom_exe(self):
+        subprocess.run(self.args)
 
     def handle_pipeline(self, commands):
-        from .cmd_map import cmd_map
-        import subprocess
-        
-        try:
-            # Simple pipeline implementation for now
-            if len(commands) == 2:
-                left_cmd, right_cmd = commands
-                
-                # Left command (producer)
-                if left_cmd[0] in cmd_map:
-                    # Builtin - capture output
-                    buf = io.StringIO()
-                    left_handler = Handler(left_cmd, history=self.history)
-                    with redirect_stdout(buf):
-                        cmd_map[left_cmd[0]](left_handler)
-                    left_output = buf.getvalue().encode()
-                else:
-                    # External command
-                    p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                    left_output, _ = p1.communicate()
-                
-                # Right command (consumer)  
-                if right_cmd[0] in cmd_map:
-                    # Builtin - use captured output
-                    right_handler = Handler(right_cmd, history=self.history)
-                    cmd_map[right_cmd[0]](right_handler)
-                else:
-                    # External command - pipe the output
-                    p2 = subprocess.Popen(right_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-                    output, _ = p2.communicate(input=left_output)
-                    sys.stdout.write(output.decode())
-                    
-        except Exception as e:
-            print(f"Error executing pipeline: {e}", file=sys.stderr)
+        prev_stdout = None
+        for i, cmd in enumerate(commands):
+            is_builtin = cmd[0] in cmd_map
+            is_last = (i == len(commands) - 1)
+
+            if is_builtin:
+                buf = io.StringIO()
+                h = Handler(cmd, history=self.history)
+                with redirect_stdout(buf):
+                    cmd_map[cmd[0]](h)
+                prev_stdout = io.BytesIO(buf.getvalue().encode())
+                continue
+
+            stdin = prev_stdout if prev_stdout else None
+            stdout = subprocess.PIPE if not is_last else None
+
+            proc = subprocess.Popen(cmd, stdin=stdin, stdout=stdout)
+            if prev_stdout:
+                proc.communicate(input=prev_stdout.read())
+            prev_stdout = proc.stdout
+        if prev_stdout:
+            sys.stdout.write(prev_stdout.read().decode())
