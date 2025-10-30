@@ -41,7 +41,6 @@
 
 # if __name__ == "__main__":
 #     main()
-
 import sys
 import readline
 import os
@@ -54,7 +53,6 @@ HISTORY_FILE = "/tmp/.shell_history"
 if os.path.exists(HISTORY_FILE):
     readline.read_history_file(HISTORY_FILE)
 
-# Save history on exit
 import atexit
 atexit.register(readline.write_history_file, HISTORY_FILE)
 
@@ -68,7 +66,6 @@ def main():
 
     while True:
         try:
-            # readline handles up-arrow
             user_input = input("$ ").strip()
         except EOFError:
             break
@@ -79,12 +76,12 @@ def main():
         if not user_input:
             continue
 
-        # Add to readline history for up-arrow
-        readline.add_history(user_input)
-        # Add to your own history for Command
+        # Always add to history, even if command fails
         history.append(user_input)
+        readline.add_history(user_input)
+        readline.write_history_file(HISTORY_FILE)
 
-        # Parse and execute
+        # Execute command
         command = Command(user_input, history)
         command.cmd_parser()
 
