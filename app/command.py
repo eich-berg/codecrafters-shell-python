@@ -8,7 +8,7 @@ class Command:
     def __init__(self, args, history=None):
         self.command = args
         self.args = shlex.split(args)  # This handles single quotes automatically
-        self.history = history or []
+        # self.history = history or []
     
     def cmd_parser(self):
         # Check for pipe operator

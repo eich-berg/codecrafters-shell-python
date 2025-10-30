@@ -19,7 +19,7 @@ class Handler:
     def __init__(self, args, redirect_type=None, filename=None, history=None):
         self.args = args
         self.output_handler = Output(redirect_type, filename)
-        self.history = history or []
+        # self.history = history or []
 
     def handle_exit(self):
         sys.exit(0)
@@ -57,13 +57,13 @@ class Handler:
             error_msg = f"cd: {path}: No such file or directory"
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
-    def handle_history(self):
+    # def handle_history(self):
         
-        n = int(self.args[1]) if len(self.args) > 1 and self.args[1].isdigit() else None
-        entries = self.history[-n:] if n else self.history
-        start = len(self.history) - len(entries) + 1
-        output = "\n".join(f"    {i}  {cmd}" for i, cmd in enumerate(entries, start))
-        self.output_handler.execute_builtin_with_redirect(output, is_error=False)
+    #     n = int(self.args[1]) if len(self.args) > 1 and self.args[1].isdigit() else None
+    #     entries = self.history[-n:] if n else self.history
+    #     start = len(self.history) - len(entries) + 1
+    #     output = "\n".join(f"    {i}  {cmd}" for i, cmd in enumerate(entries, start))
+    #     self.output_handler.execute_builtin_with_redirect(output, is_error=False)
 
 
 
