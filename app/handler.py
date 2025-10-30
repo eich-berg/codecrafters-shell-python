@@ -69,6 +69,22 @@ class Handler:
                 error_msg = "history: -r: option requires an argument"
                 self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
             return
+        elif len(self.args) > 1 and self.args[1] == "-w":
+            if len(self.args) > 2:
+                history_file = self.args[2]
+                self._write_history_from_file(history_file)
+            else:
+                error_msg = "history: -w: option requires an argument"
+                self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
+            return
+        elif len(self.args) > 1 and self.args[1] == "-a":
+            if len(self.args) > 2:
+                history_file = self.args[2]
+                self._append_history_from_file(history_file)
+            else:
+                error_msg = "history: -a: option requires an argument"
+                self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
+            return
     
         n = int(self.args[1]) if len(self.args) > 1 and self.args[1].isdigit() else None
         entries = self.history[-n:] if n else self.history
@@ -89,6 +105,24 @@ class Handler:
                             readline.add_history(line)
         except Exception as e:
             error_msg = f"history: cannot read history file: {e}"
+            self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
+            
+    def _write_history_to_file(self, history_file):
+        try:
+            with open(history_file, 'w') as f:
+                for command in self.history:
+                    f.write(command + '\n')
+        except Exception as e:
+            error_msg = f"history: cannot write history file: {e}"
+            self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
+
+    def _append_history_to_file(self, history_file):
+        try:
+            with open(history_file, 'a') as f:
+                for command in self.history:
+                    f.write(command + '\n')
+        except Exception as e:
+            error_msg = f"history: cannot append to history file: {e}"
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
     def handle_pipeline(self, left_cmd, right_cmd):
