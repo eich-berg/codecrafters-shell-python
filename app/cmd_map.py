@@ -1,14 +1,3 @@
-# from .handler import Handler
-
-# cmd_map = {
-#     "exit": Handler.handle_exit,
-#     "echo": Handler.handle_echo, 
-#     "type": Handler.handle_type,
-#     "pwd": Handler.handle_pwd,
-#     "cd": Handler.handle_cd,
-#     "history": Handler.handle_history, 
-#     }
-
 from .handler import Handler
 
 cmd_map = {
@@ -17,5 +6,5 @@ cmd_map = {
     "type": Handler.handle_type,
     "pwd": Handler.handle_pwd,
     "cd": Handler.handle_cd,
-    "history": Handler.handle_history,
-}
+    "history": Handler.handle_history, 
+    }
