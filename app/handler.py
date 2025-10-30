@@ -205,7 +205,6 @@ import io
 from .output import Output
 from contextlib import redirect_stdout
 
-from .cmd_map import cmd_map
 
 class Handler:
     def __init__(self, args, redirect_type=None, filename=None, history=None):
@@ -221,6 +220,8 @@ class Handler:
         self.output_handler.execute_builtin_with_redirect(output)
 
     def handle_type(self):
+        from .cmd_map import cmd_map
+
         name = self.args[1]
         if name in cmd_map:
             output = f"{name} is a shell builtin"
@@ -253,6 +254,8 @@ class Handler:
         subprocess.run(self.args)
 
     def handle_pipeline(self, commands):
+        from .cmd_map import cmd_map
+
         prev_stdout = None
         for i, cmd in enumerate(commands):
             is_builtin = cmd[0] in cmd_map
