@@ -72,7 +72,7 @@ class Handler:
         elif len(self.args) > 1 and self.args[1] == "-w":
             if len(self.args) > 2:
                 history_file = self.args[2]
-                self._write_history_from_file(history_file)
+                self._write_history_to_file(history_file)
             else:
                 error_msg = "history: -w: option requires an argument"
                 self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
@@ -80,7 +80,7 @@ class Handler:
         elif len(self.args) > 1 and self.args[1] == "-a":
             if len(self.args) > 2:
                 history_file = self.args[2]
-                self._append_history_from_file(history_file)
+                self._append_history_to_file(history_file)
             else:
                 error_msg = "history: -a: option requires an argument"
                 self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
