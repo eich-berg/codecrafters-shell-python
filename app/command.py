@@ -27,7 +27,8 @@ class Command:
                 commands.append(current)
 
             # Pass the list of commands to handler
-            handler = Handler(self.args, history=self.history)
+            # handler = Handler(self.args, history=self.history)
+            handler = Handler(self.args)
             handler.handle_pipeline(commands)
             return
         
@@ -45,7 +46,8 @@ class Command:
                 redirect_type = op
                 break
 
-        handler = Handler(command_args, redirect_type, filename, self.history)
+        # handler = Handler(command_args, redirect_type, filename, self.history)
+        handler = Handler(command_args, redirect_type, filename)
 
         
         if command_args[0] in cmd_map:
