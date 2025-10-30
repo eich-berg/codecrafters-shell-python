@@ -1,14 +1,21 @@
 import sys
 import readline
+import os
 from .tab_completion import tab_completer
 from .command import Command
+
+HISTORY_FILE = "/tmp/.shell_history"
 
 def main():
     # Set up tab completion
     readline.set_completer(tab_completer)
     readline.parse_and_bind("tab: complete")
-    # Enable history navigation (Up/Down arrows)
+    # Enable arrow key navigation
     readline.parse_and_bind("set enable-keypad on")
+
+    # Load existing history (if any)
+    if os.path.exists(HISTORY_FILE):
+        readline.read_history_file(HISTORY_FILE)
 
     history = []
     
@@ -23,9 +30,10 @@ def main():
 
         history.append(user_input)
         readline.add_history(user_input)
-        readline.set_history_length(1000)
+        readline.write_history_file(HISTORY_FILE)
         command = Command(user_input, history)
         command.cmd_parser()
 
 if __name__ == "__main__":
     main()
+
