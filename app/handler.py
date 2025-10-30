@@ -121,6 +121,7 @@ class Handler:
             with open(history_file, 'a') as f:
                 for command in self.history:
                     f.write(command + '\n')
+            self.history.clear()
         except Exception as e:
             error_msg = f"history: cannot append to history file: {e}"
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
