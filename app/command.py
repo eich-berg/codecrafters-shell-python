@@ -8,7 +8,7 @@ class Command:
     def __init__(self, args, history=None):
         self.command = args
         self.args = shlex.split(args)  # This handles single quotes automatically
-        # self.history = history or []
+        self.history = history or []
     
     def cmd_parser(self):
         # Check for pipe operator
@@ -27,8 +27,7 @@ class Command:
                 commands.append(current)
 
             # Pass the list of commands to handler
-            # handler = Handler(self.args, history=self.history)
-            handler = Handler(self.args)
+            handler = Handler(self.args, history=self.history)
             handler.handle_pipeline(commands)
             return
         
@@ -46,8 +45,7 @@ class Command:
                 redirect_type = op
                 break
 
-        # handler = Handler(command_args, redirect_type, filename, self.history)
-        handler = Handler(command_args, redirect_type, filename)
+        handler = Handler(command_args, redirect_type, filename, self.history)
 
         
         if command_args[0] in cmd_map:
