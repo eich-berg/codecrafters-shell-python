@@ -11,7 +11,7 @@
 #     readline.set_completer(tab_completer)
 #     readline.parse_and_bind("tab: complete")
 #     # Enable arrow key navigation
-#     # readline.parse_and_bind("set enable-keypad on")
+#     readline.parse_and_bind("set enable-keypad on")
 
 #     # Load existing history (if any)
 #     if os.path.exists(HISTORY_FILE):
@@ -46,43 +46,35 @@ import sys
 import readline
 import os
 from .command import Command
-from .tab_completion import tab_completer
 
 HISTORY_FILE = "/tmp/.shell_history"
 
-# Load previous history
-if os.path.exists(HISTORY_FILE):
-    readline.read_history_file(HISTORY_FILE)
-
-import atexit
-atexit.register(readline.write_history_file, HISTORY_FILE)
-
 def main():
-    # Tab completion + arrow keys
-    readline.set_completer(tab_completer)
+    # Set up tab completion
     readline.parse_and_bind("tab: complete")
-    readline.parse_and_bind("set enable-keypad on")
-
-    history = []
+    
+    # Load existing history
+    if os.path.exists(HISTORY_FILE):
+        readline.read_history_file(HISTORY_FILE)
 
     while True:
         try:
             user_input = input("$ ").strip()
         except EOFError:
             break
-        except KeyboardInterrupt:
-            print()
-            continue
-
+        
         if not user_input:
             continue
 
-        # Add to history BEFORE executing
-        history.append(user_input)
+        # Add to readline history
         readline.add_history(user_input)
         readline.write_history_file(HISTORY_FILE)
-
-        # Execute command
+        
+        # Pass the entire history from readline to Command
+        history = []
+        for i in range(1, readline.get_current_history_length() + 1):
+            history.append(readline.get_history_item(i))
+        
         command = Command(user_input, history)
         command.cmd_parser()
 
