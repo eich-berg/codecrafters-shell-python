@@ -2,6 +2,7 @@ import sys
 import shutil
 import os
 import subprocess
+import readline
 import io
 from .output import Output
 from contextlib import redirect_stdout, redirect_stderr
@@ -58,7 +59,17 @@ class Handler:
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
     def handle_history(self):
-        
+
+        # Handle history -r <file> command
+        if len(self.args) > 1 and self.args[1] == "-r":
+            if len(self.args) > 2:
+                history_file = self.args[2]
+                self._read_history_from_file(history_file)
+            else:
+                error_msg = "history: -r: option requires an argument"
+                self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
+            return
+    
         n = int(self.args[1]) if len(self.args) > 1 and self.args[1].isdigit() else None
         entries = self.history[-n:] if n else self.history
         start = len(self.history) - len(entries) + 1
@@ -66,6 +77,19 @@ class Handler:
         self.output_handler.execute_builtin_with_redirect(output, is_error=False)
 
 
+    def _read_history_from_file(self, history_file):
+        try:
+            if os.path.exists(history_file):
+                with open(history_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:  # Skip empty lines
+                            self.history.append(line)
+                            # Also add to readline history for tab completion
+                            readline.add_history(line)
+        except Exception as e:
+            error_msg = f"history: cannot read history file: {e}"
+            self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
     def handle_pipeline(self, left_cmd, right_cmd):
         from .cmd_map import cmd_map
