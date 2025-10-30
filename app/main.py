@@ -1,5 +1,6 @@
 import sys
 import readline
+import readline
 from .tab_completion import tab_completer
 from .command import Command
 
@@ -7,6 +8,8 @@ def main():
     # Set up tab completion
     readline.set_completer(tab_completer)
     readline.parse_and_bind("tab: complete")
+    # Enable history navigation (Up/Down arrows)
+    readline.parse_and_bind("set enable-keypad on")
 
     history = []
     
@@ -21,6 +24,7 @@ def main():
 
         if user_input:
             history.append(user_input)
+            readline.add_history(user_input)
             command = Command(user_input, history)
             command.cmd_parser()
 
