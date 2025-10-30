@@ -1,6 +1,5 @@
 import sys
 import readline
-import readline
 from .tab_completion import tab_completer
 from .command import Command
 
@@ -14,19 +13,18 @@ def main():
     history = []
     
     while True:
-        sys.stdout.write("$ ")
-        sys.stdout.flush()
-
         try:
-            user_input = input().strip()
+            user_input = input("$ ").strip()
         except EOFError:
             break
+        
+        if not user_input:
+            continue
 
-        if user_input:
-            history.append(user_input)
-            readline.add_history(user_input)
-            command = Command(user_input, history)
-            command.cmd_parser()
+        history.append(user_input)
+        readline.add_history(user_input)
+        command = Command(user_input, history)
+        command.cmd_parser()
 
 if __name__ == "__main__":
     main()
