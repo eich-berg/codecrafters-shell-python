@@ -23,6 +23,7 @@ def main():
 
         history.append(user_input)
         readline.add_history(user_input)
+        readline.set_history_length(1000)
         command = Command(user_input, history)
         command.cmd_parser()
 
