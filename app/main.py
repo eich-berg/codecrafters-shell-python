@@ -33,7 +33,6 @@ def main():
                 new_entries = history[initial_history_count:]
                 for cmd in new_entries:
                     f.write(cmd + "\n")
-                f.write("\n")  # Add final empty line
         except Exception as e:
             print(f"Error appending to history: {e}", file=sys.stderr)
 
