@@ -1,7 +1,6 @@
 import sys
 import readline
 import os
-from .command import Command
 from .cmd_map import cmd_map
 
 last_completion_text = None
@@ -53,12 +52,13 @@ def tab_completer(text, state):
         if state == 0:
             return lcp
         return None
+    
     # First press: ring bell only
     if text != last_completion_text:
         sys.stdout.write('\a')
         sys.stdout.flush()
         last_completion_text = text
-        last_completion_matches = all_options
+        # last_completion_matches = all_options
         return None
     # Second press with same prefix: show completions
     else:

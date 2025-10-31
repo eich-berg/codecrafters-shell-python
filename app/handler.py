@@ -5,15 +5,7 @@ import subprocess
 import readline
 import io
 from .output import Output
-from contextlib import redirect_stdout, redirect_stderr
-
-def redirect_stdin(target):
-    old_stdin = sys.stdin
-    try:
-        sys.stdin = target
-        yield
-    finally:
-        sys.stdin = old_stdin
+from contextlib import redirect_stdout
 
 class Handler:
 
@@ -59,14 +51,13 @@ class Handler:
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
     def handle_history(self):
-
         # Handle history -r <file> command
+        error_msg = "history: -r/-w/-a: options require an argument"
         if len(self.args) > 1 and self.args[1] == "-r":
             if len(self.args) > 2:
                 history_file = self.args[2]
                 self._read_history_from_file(history_file)
             else:
-                error_msg = "history: -r: option requires an argument"
                 self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
             return
         elif len(self.args) > 1 and self.args[1] == "-w":
@@ -74,7 +65,6 @@ class Handler:
                 history_file = self.args[2]
                 self._write_history_to_file(history_file)
             else:
-                error_msg = "history: -w: option requires an argument"
                 self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
             return
         elif len(self.args) > 1 and self.args[1] == "-a":
@@ -82,7 +72,6 @@ class Handler:
                 history_file = self.args[2]
                 self._append_history_to_file(history_file)
             else:
-                error_msg = "history: -a: option requires an argument"
                 self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
             return
     
@@ -126,53 +115,6 @@ class Handler:
             error_msg = f"history: cannot append to history file: {e}"
             self.output_handler.execute_builtin_with_redirect(error_msg, is_error=True)
 
-    def handle_pipeline(self, left_cmd, right_cmd):
-        from .cmd_map import cmd_map
-        try:
-            # --- Case 1: both are external (streaming) ---
-            if left_cmd[0] not in cmd_map and right_cmd[0] not in cmd_map:
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
-                p1.stdout.close()  # Allow p1 to receive SIGPIPE if p2 exits early
-                p2.wait()          # Wait for second command (e.g., `head`) to finish
-                p1.terminate()     # Stop `tail -f` or other continuous producer
-                return
-
-            # --- Case 2: left is builtin, right is external ---
-            if left_cmd[0] in cmd_map and right_cmd[0] not in cmd_map:
-                buf = io.StringIO()
-                left_handler = Handler(left_cmd)
-                with redirect_stdout(buf):
-                    cmd_map[left_cmd[0]](left_handler)
-                left_output = buf.getvalue().encode()
-
-                p2 = subprocess.Popen(right_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-                output, _ = p2.communicate(input=left_output)
-                sys.stdout.write(output.decode())
-                return
-
-            # --- Case 3: left is external, right is builtin ---
-            if left_cmd[0] not in cmd_map and right_cmd[0] in cmd_map:
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                left_output, _ = p1.communicate()
-                right_handler = Handler(right_cmd)
-                cmd_map[right_cmd[0]](right_handler)
-                return
-
-            # --- Case 4: both are builtins ---
-            if left_cmd[0] in cmd_map and right_cmd[0] in cmd_map:
-                buf = io.StringIO()
-                left_handler = Handler(left_cmd)
-                with redirect_stdout(buf):
-                    cmd_map[left_cmd[0]](left_handler)
-                left_output = buf.getvalue().encode()
-                right_handler = Handler(right_cmd)
-                cmd_map[right_cmd[0]](right_handler)
-                return
-
-        except Exception as e:
-            print(f"Error executing pipeline: {e}", file=sys.stderr)
-
     def handle_pipeline(self, commands):
         from .cmd_map import cmd_map
 
@@ -185,7 +127,7 @@ class Handler:
                 is_builtin = cmd[0] in cmd_map
                 is_last = (i == len(commands) - 1)
 
-                # --- Case 1: Builtin command ---
+                # Case 1: Builtin command
                 if is_builtin:
                     buf = io.StringIO()
                     h = Handler(cmd)
@@ -195,7 +137,7 @@ class Handler:
                     prev_stdout = io.BytesIO(builtin_output)
                     continue
 
-                # --- Case 2: External command ---
+                # Case 2: External command
                 stdin = None
                 if builtin_output is not None:
                     stdin = subprocess.PIPE
@@ -215,7 +157,7 @@ class Handler:
 
                 processes.append(p)
 
-            # --- NEW: handle last command being a builtin ---
+            # Handle last command being a builtin
             if commands and commands[-1][0] in cmd_map and len(commands) > 1:
                 last_cmd = commands[-1]
                 last_is_builtin = last_cmd[0] in cmd_map
@@ -228,7 +170,7 @@ class Handler:
                         prev_output = b""
 
                     buf_in = io.StringIO(prev_output.decode())
-                    sys.stdin = buf_in  # temporarily redirect stdin
+                    sys.stdin = buf_in  # Temporarily redirect stdin
                     try:
                         h = Handler(last_cmd)
                         cmd_map[last_cmd[0]](h)
@@ -236,7 +178,7 @@ class Handler:
                         sys.stdin = sys.__stdin__
                     return
 
-            # --- Regular final output case ---
+            # Default final output case
             if processes:
                 last_proc = processes[-1]
                 output, _ = last_proc.communicate()

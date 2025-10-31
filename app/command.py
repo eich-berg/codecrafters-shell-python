@@ -7,25 +7,17 @@ class Command:
 
     def __init__(self, args, history=None):
         self.command = args
-        self.args = shlex.split(args)  # This handles single quotes automatically
+        self.args = shlex.split(args)  # shlex handles single quotes automatically
         self.history = history or []
     
     def cmd_parser(self):
-        # Check for pipe operator
-        if "|" in self.args:
-            # Split into multiple commands by '|'
-            commands = []
-            current = []
-            for arg in self.args:
-                if arg == "|":
-                    if current:
-                        commands.append(current)
-                        current = []
-                else:
-                    current.append(arg)
-            if current:
-                commands.append(current)
 
+        if "|" in self.args:
+            # Split the args around the pipe symbol
+            pipe_segments = " ".join(self.args).split("|")
+            # Turn each segment into its own list of args
+            commands = [shlex.split(segment.strip()) for segment in pipe_segments]
+            
             # Pass the list of commands to handler
             handler = Handler(self.args, history=self.history)
             handler.handle_pipeline(commands)
@@ -59,3 +51,6 @@ class Command:
             return
             
         print(f"{self.command}: command not found")
+
+
+
