@@ -25,11 +25,12 @@ def main():
                     history.append(line)
 
     # Register save function (append new history only)
+    initial_history_count = len(history)
     def append_history_on_exit():
         try:
             with open(histfile, "a") as f:
                 # Only append commands entered after startup
-                new_entries = history[len(history):]
+                new_entries = history[initial_history_count:]
                 for cmd in new_entries:
                     f.write(cmd + "\n")
                 f.write("\n")  # Add final empty line
